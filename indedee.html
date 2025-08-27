@@ -1,0 +1,733 @@
+/<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>G5 — Full Buy & Sell Demo</title>
+<style>
+:root{
+  --brand:#2874f0; --brand-dark:#0b5ed7; --muted:#6b7280; --bg:#f4f6fb; --card:#fff;
+}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;background:var(--bg);color:#111}
+header{background:linear-gradient(90deg,var(--brand),var(--brand-dark));color:white;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{display:flex;align-items:center;gap:12px}
+.badge{background:white;color:var(--brand);font-weight:900;padding:6px 10px;border-radius:8px;font-size:18px}
+nav{display:flex;gap:8px;align-items:center}
+nav button{background:transparent;border:1px solid rgba(255,255,255,0.18);color:white;padding:8px 10px;border-radius:8px;cursor:pointer}
+nav button:hover{background:rgba(255,255,255,0.06)}
+.container{max-width:1100px;margin:18px auto;padding:0 16px}
+.section{display:none;background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(16,24,40,0.06);margin-bottom:18px;animation:fadeUp .28s both}
+.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.searchbar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+.searchbar input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #d1d5db}
+.products{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{background:#fff;border-radius:10px;padding:12px;cursor:pointer;border:1px solid #eef2f7;display:flex;flex-direction:column;gap:8px}
+.card img{width:100%;height:140px;object-fit:contain;border-radius:8px;background:#f8fafc}
+.card h4{margin:0;font-size:15px}
+.price{font-weight:800;color:var(--brand)}
+.row-between{display:flex;justify-content:space-between;align-items:center}
+.btn{background:var(--brand);color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+.btn.secondary{background:#f3f4f6;color:#111}
+.small{font-size:13px;color:var(--muted)}
+/* detail */
+#detail img{max-width:100%;border-radius:10px;display:block;margin-bottom:12px}
+/* forms */
+form input, form textarea, form select {display:block;padding:10px;border-radius:8px;border:1px solid #e6e9ef;margin-top:8px;width:100%}
+form textarea{min-height:80px}
+/* cart table */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left}
+.right{text-align:right}
+/* spinner */
+.spinner{display:none;text-align:center;margin:12px 0}
+.spinner div{width:30px;height:30px;border:4px solid #ddd;border-top:4px solid var(--brand);border-radius:50%;animation:spin 1s linear infinite;margin:auto}
+@keyframes spin{100%{transform:rotate(360deg)}}
+/* responsive */
+@media (max-width:880px){header{flex-direction:column;align-items:flex-start} .row{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="badge">G5</div>
+    <div>
+      <div style="font-weight:800;font-size:18px">G5 Marketplace</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.9)">Buy & Sell demo</div>
+    </div>
+  </div>
+
+  <nav>
+    <button onclick="show('home')">Home</button>
+    <button onclick="show('sell')">Sell Product</button>
+    <button onclick="show('myProducts')">My Products</button>
+    <button onclick="show('sellerSettings')">Seller Settings</button>
+    <button onclick="show('buyerSettings')">Buyer Settings</button>
+    <button onclick="show('cart')">Cart <span id="cartCount" style="margin-left:8px" class="badge" id="badge">0</span></button>
+    <button onclick="show('orders')">Orders</button>
+    <button id="accountBtn" onclick="show('account')">Account</button>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- HOME -->
+  <section id="home" class="section active">
+    <div class="searchbar">
+      <input id="searchInput" placeholder="Search products (e.g. laptop, phone)..." oninput="resetAndRender()" />
+      <button class="btn" onclick="resetAndRender()">Search</button>
+    </div>
+
+    <div id="products" class="products"></div>
+
+    <div id="spinner" class="spinner"><div></div></div>
+    <div style="text-align:center;margin-top:12px">
+      <button id="loadMoreBtn" class="btn">Load More</button>
+    </div>
+  </section>
+
+  <!-- DETAIL -->
+  <section id="detail" class="section">
+    <div style="display:flex;gap:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px;max-width:420px">
+        <img id="detailImg" src="" alt=""/>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <h2 id="detailName"></h2>
+        <div id="detailOwner" class="small"></div>
+        <p id="detailDesc" class="small" style="margin-top:10px"></p>
+        <h3 id="detailPrice" style="margin-top:8px"></h3>
+
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="quickBuy()">Buy Now</button>
+          <button class="btn secondary" onclick="addToCartSelected()">Add to Cart</button>
+          <button class="btn secondary" onclick="show('home')">Back</button>
+        </div>
+
+        <div id="detailSellerActions" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SELL (upload) -->
+  <section id="sell" class="section">
+    <h2>Sell a Product</h2>
+    <form id="sellForm">
+      <input id="sellName" placeholder="Product Name" required />
+      <input id="sellPrice" type="number" placeholder="Price (₹)" required />
+      <textarea id="sellDesc" placeholder="Description" required></textarea>
+      <input id="sellImage" type="file" accept="image/*" required/>
+      <div style="margin-top:8px"><img id="sellPreview" style="max-width:220px;border-radius:8px;display:none"/></div>
+      <button class="btn" type="submit">Upload Product</button>
+    </form>
+  </section>
+
+  <!-- MY PRODUCTS -->
+  <section id="myProducts" class="section">
+    <h2>My Uploaded Products</h2>
+    <div id="myList" class="products"></div>
+    <div id="noMyProducts" class="small" style="margin-top:12px"></div>
+  </section>
+
+  <!-- SELLER SETTINGS -->
+  <section id="sellerSettings" class="section">
+    <h2>Seller Payment & Delivery Settings</h2>
+    <div style="max-width:700px">
+      <form id="sellerForm">
+        <label>Bank Name</label>
+        <input id="sellerBank" placeholder="Bank name"/>
+        <label>Account Holder Name</label>
+        <input id="sellerAccName" placeholder="Account holder"/>
+        <label>Account Number</label>
+        <input id="sellerAccNo" placeholder="Account number"/>
+        <label>IFSC</label>
+        <input id="sellerIfsc" placeholder="IFSC code"/>
+        <label>UPI ID (optional)</label>
+        <input id="sellerUpi" placeholder="example@bank"/>
+        <label>Delivery Pincodes (comma separated)</label>
+        <input id="sellerPincodes" placeholder="e.g., 110001,560001"/>
+        <label>Default Delivery Charge (₹)</label>
+        <input id="sellerDeliveryCharge" type="number" placeholder="e.g., 40"/>
+        <div style="margin-top:10px">
+          <button class="btn" type="button" onclick="saveSellerSettings()">Save Seller Settings</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- BUYER SETTINGS -->
+  <section id="buyerSettings" class="section">
+    <h2>Buyer Payment & Address</h2>
+    <form id="buyerForm">
+      <label>Preferred Payment Method</label>
+      <select id="buyerPayMethod">
+        <option value="COD">Cash on Delivery</option>
+        <option value="UPI">UPI</option>
+        <option value="Card">Card</option>
+      </select>
+      <label>Payment Details (UPI ID or Card last 4 etc.)</label>
+      <input id="buyerPayDetail" placeholder="e.g., myupi@bank or **** 1234"/>
+      <label>Delivery Name</label>
+      <input id="buyerName" placeholder="Full name"/>
+      <label>Address Line</label>
+      <textarea id="buyerAddress" placeholder="House, street, area"></textarea>
+      <label>City</label>
+      <input id="buyerCity" placeholder="City"/>
+      <label>Pincode</label>
+      <input id="buyerPincode" placeholder="6-digit pincode"/>
+      <div style="margin-top:10px">
+        <button class="btn" type="button" onclick="saveBuyerSettings()">Save Buyer Details</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- CART -->
+  <section id="cart" class="section">
+    <h2>Your Cart</h2>
+    <div id="cartWrap"></div>
+  </section>
+
+  <!-- CHECKOUT -->
+  <section id="checkout" class="section">
+    <h2>Checkout & Delivery</h2>
+    <div id="checkoutSummary" style="margin-bottom:12px"></div>
+    <form id="checkoutForm">
+      <label>Delivery Name</label><input id="chkName" required/>
+      <label>Address</label><textarea id="chkAddress" required></textarea>
+      <label>City</label><input id="chkCity" required/>
+      <label>Pincode</label><input id="chkPincode" required/>
+      <label>Payment Method</label>
+      <select id="chkPayment">
+        <option value="COD">Cash on Delivery</option>
+        <option value="UPI">UPI</option>
+        <option value="Card">Card</option>
+      </select>
+      <div style="margin-top:12px">
+        <button class="btn" type="submit">Place Order</button>
+        <button class="btn secondary" type="button" onclick="show('cart')">Back to Cart</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ORDERS -->
+  <section id="orders" class="section">
+    <h2>Order History</h2>
+    <div id="ordersList"></div>
+  </section>
+
+  <!-- ACCOUNT -->
+  <section id="account" class="section">
+    <div id="authWrap">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="min-width:260px">
+          <h3>Login</h3>
+          <input id="loginUser" placeholder="Username / Email"/>
+          <input id="loginPass" type="password" placeholder="Password"/>
+          <div style="margin-top:8px"><button class="btn" onclick="login()">Login</button></div>
+        </div>
+        <div style="min-width:260px">
+          <h3>Signup</h3>
+          <input id="signupUser" placeholder="Username / Email"/>
+          <input id="signupPass" type="password" placeholder="Password"/>
+          <div style="margin-top:8px"><button class="btn" onclick="signup()">Create account</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="profileWrap" style="display:none">
+      <h3>Profile</h3>
+      <p><b id="profileUser"></b></p>
+      <p class="small" id="profileInfo"></p>
+      <div style="margin-top:12px">
+        <button class="btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ---------- storage keys ---------- */
+const KEYS = {
+  users: 'g5_users',
+  uploaded: 'g5_products_uploaded',
+  carts: 'g5_carts',
+  orders: 'g5_orders',
+  session: 'g5_session'
+};
+
+/* ---------- default platform products ---------- */
+let defaultProducts = [
+  { id:1001, name:'Smartphone XYZ', price:15999, desc:'Latest smartphone with 8GB RAM', img:'https://via.placeholder.com/260x160?text=Phone', uploaded:false, owner:'G5' },
+  { id:1002, name:'Laptop ProBook', price:49999, desc:'Powerful laptop for work and gaming', img:'https://via.placeholder.com/260x160?text=Laptop', uploaded:false, owner:'G5' },
+  { id:1003, name:'Wireless Headphones', price:2499, desc:'Bluetooth headphones with deep bass', img:'https://via.placeholder.com/260x160?text=Headphones', uploaded:false, owner:'G5' },
+  { id:1004, name:'Smartwatch Gen5', price:7999, desc:'AMOLED display, fitness tracking', img:'https://via.placeholder.com/260x160?text=Watch', uploaded:false, owner:'G5' },
+  { id:1005, name:'Smart TV 43"', price:24499, desc:'4K Smart TV with apps', img:'https://via.placeholder.com/260x160?text=TV', uploaded:false, owner:'G5' },
+  { id:1006, name:'NVMe SSD 1TB', price:6990, desc:'Fast NVMe storage', img:'https://via.placeholder.com/260x160?text=SSD', uploaded:false, owner:'G5' },
+  { id:1007, name:'Bluetooth Speaker', price:2499, desc:'Portable IPX7 speaker', img:'https://via.placeholder.com/260x160?text=Speaker', uploaded:false, owner:'G5' },
+  { id:1008, name:'AirFlex Sneakers', price:2299, desc:'Comfortable sneakers', img:'https://via.placeholder.com/260x160?text=Shoes', uploaded:false, owner:'G5' },
+  { id:1009, name:'Microwave Oven', price:6999, desc:'Convection microwave', img:'https://via.placeholder.com/260x160?text=Microwave', uploaded:false, owner:'G5' },
+  { id:1010, name:'Refrigerator', price:30000, desc:'Double door fridge', img:'https://via.placeholder.com/260x160?text=Fridge', uploaded:false, owner:'G5' }
+];
+
+/* ---------- helpers to load/save ---------- */
+function loadUploaded(){ return JSON.parse(localStorage.getItem(KEYS.uploaded) || '[]'); }
+function saveUploaded(arr){ localStorage.setItem(KEYS.uploaded, JSON.stringify(arr)); }
+
+function loadUsers(){ return JSON.parse(localStorage.getItem(KEYS.users) || '[]'); }
+function saveUsers(u){ localStorage.setItem(KEYS.users, JSON.stringify(u)); }
+
+function loadCarts(){ return JSON.parse(localStorage.getItem(KEYS.carts) || '{}'); }
+function saveCarts(c){ localStorage.setItem(KEYS.carts, JSON.stringify(c)); }
+
+function loadOrders(){ return JSON.parse(localStorage.getItem(KEYS.orders) || '[]'); }
+function saveOrders(o){ localStorage.setItem(KEYS.orders, JSON.stringify(o)); }
+
+function getSession(){ return localStorage.getItem(KEYS.session) || null; }
+function setSession(u){ if(u) localStorage.setItem(KEYS.session, u); else localStorage.removeItem(KEYS.session); }
+
+/* ---------- product cache & pagination ---------- */
+let productsCache = [];
+function rebuildProductsCache(){
+  productsCache = defaultProducts.concat(loadUploaded());
+}
+rebuildProductsCache();
+
+let perPage = 6;
+let currentPointer = 0; // index for pagination
+
+/* ---------- initial render ---------- */
+function resetAndRender(){
+  currentPointer = 0;
+  document.getElementById('products').innerHTML = '';
+  renderProducts(true);
+}
+
+function renderProducts(reset=false){
+  rebuildProductsCache();
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const filtered = productsCache.filter(p => (p.name + ' ' + p.desc).toLowerCase().includes(q));
+  const grid = document.getElementById('products');
+  const spinner = document.getElementById('spinner');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+  // if reset, clear grid
+  if(reset) { grid.innerHTML = ''; currentPointer = 0; }
+
+  // show spinner
+  spinner.style.display = 'block';
+  // simulate loading delay
+  setTimeout(() => {
+    const slice = filtered.slice(currentPointer, currentPointer + perPage);
+    slice.forEach(p => {
+      const el = document.createElement('div'); el.className='card';
+      el.innerHTML = `<img src="${p.img}" alt="${escapeHtml(p.name)}"/><div style="flex:1"><h4>${escapeHtml(p.name)}</h4><div class="small">${escapeHtml(p.owner || 'Seller')}</div><div class="row-between" style="margin-top:8px"><div class="price">₹${formatNumber(p.price)}</div><div class="small">${p.uploaded ? 'Seller' : 'G5'}</div></div></div>`;
+      el.onclick = ()=> showDetail(p.id);
+      grid.appendChild(el);
+    });
+    currentPointer += perPage;
+    spinner.style.display = 'none';
+    loadMoreBtn.style.display = currentPointer >= filtered.length ? 'none' : 'inline-block';
+    updateCartBadge();
+  }, 600);
+}
+
+/* infinite scroll */
+window.addEventListener('scroll', () => {
+  if(window.innerHeight + window.scrollY >= document.body.offsetHeight - 80){
+    // try load more if button visible
+    const btn = document.getElementById('loadMoreBtn');
+    if(btn && btn.style.display !== 'none') { renderProducts(); }
+  }
+});
+
+/* load more on button */
+document.getElementById('loadMoreBtn').addEventListener('click', ()=> renderProducts());
+
+/* ---------- detail view ---------- */
+let selectedProduct = null;
+function showDetail(id){
+  rebuildProductsCache();
+  const p = productsCache.find(x=>x.id === id);
+  if(!p) return alert('Product not found');
+  selectedProduct = p;
+  document.getElementById('detailImg').src = p.img;
+  document.getElementById('detailName').innerText = p.name;
+  document.getElementById('detailDesc').innerText = p.desc;
+  document.getElementById('detailPrice').innerText = '₹' + formatNumber(p.price);
+  document.getElementById('detailOwner').innerText = p.uploaded ? ('Seller: ' + (p.owner || 'Unknown')) : 'Sold by G5';
+  // seller actions (delete) only for owner
+  const wrap = document.getElementById('detailSellerActions'); wrap.innerHTML = '';
+  const cur = getSession();
+  if(p.uploaded && cur && p.owner === cur){
+    const del = document.createElement('button'); del.className='btn'; del.style.background='crimson'; del.innerText='Delete Product'; del.onclick = (ev) => { ev.stopPropagation(); if(confirm('Delete product?')) deleteUploadedProduct(p.id); };
+    wrap.appendChild(del);
+  }
+  show('detail');
+}
+
+/* ---------- cart (per user) ---------- */
+function getCartForUser(user){ const carts = loadCarts(); return carts[user] || []; }
+function saveCartForUser(user, arr){ const carts = loadCarts(); carts[user]=arr; saveCarts(carts); }
+
+function addToCart(productId, qty=1){
+  const user = getSession();
+  if(!user){ alert('Please login to add to cart'); show('account'); return; }
+  let cart = getCartForUser(user);
+  const found = cart.find(i=>i.productId === productId);
+  if(found) found.qty += qty; else cart.push({ productId, qty });
+  saveCartForUser(user, cart);
+  updateCartBadge();
+  alert('Added to cart');
+}
+function addToCartSelected(){ if(selectedProduct) addToCart(selectedProduct.id,1); }
+
+function renderCart(){
+  const user = getSession();
+  const wrap = document.getElementById('cartWrap'); wrap.innerHTML = '';
+  if(!user){ wrap.innerHTML = '<p class="small">Please login to view cart.</p>'; show('cart'); return; }
+  let cart = getCartForUser(user);
+  if(cart.length === 0){ wrap.innerHTML = '<p class="small">Your cart is empty.</p>'; show('cart'); return; }
+  // build table
+  const table = document.createElement('table');
+  const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>Product</th><th>Price</th><th>Qty</th><th class="right">Total</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  let grand = 0;
+  cart.forEach(item => {
+    const p = productsCache.find(x=>x.id === item.productId);
+    if(!p) return;
+    const total = p.price * item.qty; grand += total;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><div style="display:flex;gap:8px;align-items:center"><img src="${p.img}" style="width:60px;height:40px;object-fit:cover;border-radius:6px"/><div><b>${escapeHtml(p.name)}</b><div class="small">${escapeHtml(p.owner)}</div></div></div></td>
+                    <td>₹${formatNumber(p.price)}</td>
+                    <td><input type="number" value="${item.qty}" min="1" style="width:70px" onchange="updateQty(${item.productId}, this.value)"></td>
+                    <td class="right">₹${formatNumber(total)}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  const foot = document.createElement('div'); foot.style.marginTop='12px'; foot.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><b>Total:</b> ₹${formatNumber(grand)}</div><div><button class="btn" onclick="prepareCheckout()">Checkout</button></div></div>`;
+  wrap.appendChild(foot);
+  show('cart');
+}
+
+function updateQty(productId, newQty){
+  const user = getSession(); if(!user) return;
+  let cart = getCartForUser(user);
+  const itm = cart.find(i=>i.productId === productId);
+  if(itm){ itm.qty = Math.max(1, Number(newQty)); saveCartForUser(user, cart); renderCart(); updateCartBadge(); }
+}
+
+/* cart badge */
+function updateCartBadge(){
+  const user = getSession();
+  const badge = document.getElementById('cartCount');
+  if(!user){ badge.innerText = 0; return; }
+  const cart = getCartForUser(user);
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  badge.innerText = count;
+}
+
+/* ---------- checkout flow ---------- */
+function prepareCheckout(){
+  const user = getSession(); if(!user){ alert('Login to checkout'); show('account'); return; }
+  const cart = getCartForUser(user); if(cart.length===0){ alert('Cart empty'); return; }
+  // Fill checkout form with buyer saved data if exists
+  const users = loadUsers(); const me = users.find(u=>u.username === user);
+  if(me && me.buyer){
+    document.getElementById('chkName').value = me.buyer.name || '';
+    document.getElementById('chkAddress').value = me.buyer.address || '';
+    document.getElementById('chkCity').value = me.buyer.city || '';
+    document.getElementById('chkPincode').value = me.buyer.pincode || '';
+    document.getElementById('chkPayment').value = me.buyer.paymentMethod || 'COD';
+  } else {
+    document.getElementById('chkName').value = user;
+    document.getElementById('chkAddress').value = '';
+    document.getElementById('chkCity').value = '';
+    document.getElementById('chkPincode').value = '';
+    document.getElementById('chkPayment').value = 'COD';
+  }
+
+  // Build checkout summary: list items + compute delivery charges per seller
+  rebuildProductsCache();
+  const items = cart.map(it => {
+    const p = productsCache.find(x=>x.id === it.productId);
+    return { ...p, qty: it.qty };
+  });
+  let summaryHTML = '<div style="border:1px solid #eef2f7;padding:12px;border-radius:8px">';
+  let subtotal = 0;
+  items.forEach(it => { subtotal += it.price * it.qty; summaryHTML += `<div style="display:flex;justify-content:space-between"><div><b>${escapeHtml(it.name)}</b> x ${it.qty}</div><div>₹${formatNumber(it.price*it.qty)}</div></div>`; });
+  // compute delivery charges: for each seller, check seller settings if buyer pincode in seller list else default
+  summaryHTML += `<hr style="margin:8px 0"><div style="display:flex;justify-content:space-between"><div><b>Subtotal</b></div><div>₹${formatNumber(subtotal)}</div></div>`;
+  summaryHTML += `</div><div style="margin-top:10px" class="small">You will provide address & payment on next step.</div>`;
+  document.getElementById('checkoutSummary').innerHTML = summaryHTML;
+  show('checkout');
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const user = getSession(); if(!user){ alert('Login to place order'); show('account'); return; }
+  const name = document.getElementById('chkName').value.trim();
+  const addr = document.getElementById('chkAddress').value.trim();
+  const city = document.getElementById('chkCity').value.trim();
+  const pin = document.getElementById('chkPincode').value.trim();
+  const pay = document.getElementById('chkPayment').value;
+  if(!name||!addr||!city||!pin) return alert('Please fill address details');
+
+  // Save buyer details into user profile for convenience
+  const users = loadUsers(); const me = users.find(u=>u.username === user);
+  if(me){ me.buyer = { name, address: addr, city, pincode: pin, paymentMethod: pay, paymentDetail: me.buyer ? me.buyer.paymentDetail : '' }; saveUsers(users); }
+
+  // build order items and compute total + delivery by checking sellers
+  rebuildProductsCache();
+  const cart = getCartForUser(user);
+  const items = cart.map(it => {
+    const p = productsCache.find(x=>x.id === it.productId);
+    return { productId:p.id, name:p.name, price:p.price, qty:it.qty, img:p.img, seller:p.owner || 'G5' };
+  });
+
+  // delivery calculation: for each seller, if seller has pincodes and match pin -> sellerCharge else default charge 40
+  let total = 0; let deliveryTotal = 0;
+  const sellersMap = {}; // seller -> deliveryCharge
+  items.forEach(it => {
+    total += it.price * it.qty;
+    // find seller settings (users saved)
+    const sellerUser = it.seller;
+    let charge = 40; // default
+    if(sellerUser && sellerUser !== 'G5'){
+      const users = loadUsers(); const su = users.find(u=>u.username === sellerUser);
+      if(su && su.seller){
+        const pincodes = (su.seller.pincodes || '').split(',').map(s=>s.trim()).filter(Boolean);
+        const sellerCharge = (su.seller.deliveryCharge !== undefined && su.seller.deliveryCharge !== null) ? Number(su.seller.deliveryCharge) : 40;
+        if(pincodes.length === 0 || pincodes.includes(pin)) charge = sellerCharge;
+        else charge = sellerCharge + 50; // extra if pincode not in seller list (example)
+      }
+    }
+    deliveryTotal += charge;
+    sellersMap[sellerUser] = charge; // last wins — ok for demo
+  });
+
+  const order = {
+    id: 'ORD'+Date.now(),
+    user, name, addr, city, pin, pay,
+    items, subtotal: total, delivery: deliveryTotal, total: total + deliveryTotal,
+    date: new Date().toISOString()
+  };
+
+  // store order
+  const orders = loadOrders(); orders.push(order); saveOrders(orders);
+
+  // clear cart
+  saveCartForUser(user, []);
+  updateCartBadge();
+  alert('Order placed! Order ID: ' + order.id);
+  renderOrders();
+  show('orders');
+});
+
+/* ---------- orders render ---------- */
+function renderOrders(){
+  const user = getSession();
+  const wrap = document.getElementById('ordersList'); wrap.innerHTML = '';
+  if(!user){ wrap.innerHTML = '<p class="small">Please login to view orders.</p>'; return; }
+  const orders = loadOrders().filter(o=>o.user === user).reverse();
+  if(orders.length === 0){ wrap.innerHTML = '<p class="small">No orders yet.</p>'; return; }
+  orders.forEach(o=>{
+    const div = document.createElement('div'); div.style.border='1px solid #eef2f7'; div.style.padding='12px'; div.style.marginBottom='12px'; div.style.borderRadius='8px';
+    div.innerHTML = `<div style="display:flex;justify-content:space-between"><div><b>Order ${o.id}</b><div class="small">${new Date(o.date).toLocaleString()}</div></div><div><b>₹${formatNumber(o.total)}</b></div></div>
+      <div style="margin-top:8px">${o.items.map(it=>`<div style="display:flex;gap:8px;align-items:center"><img src="${it.img}" style="width:60px;height:40px;object-fit:cover;border-radius:6px"/><div><b>${escapeHtml(it.name)}</b><div class="small">Qty: ${it.qty} • ₹${formatNumber(it.price)}</div></div></div>`).join('')}</div>
+      <div style="margin-top:8px" class="small">Payment: ${escapeHtml(o.pay)} • Delivery: ${escapeHtml(o.addr)}, ${escapeHtml(o.city)} - ${escapeHtml(o.pin)}</div>`;
+    wrap.appendChild(div);
+  });
+}
+
+/* ---------- sell product upload ---------- */
+document.getElementById('sellImage').addEventListener('change', function(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){ const img = document.getElementById('sellPreview'); img.src = ev.target.result; img.style.display='block'; };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('sellForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const user = getSession(); if(!user){ alert('Please login to sell'); show('account'); return; }
+  const name = document.getElementById('sellName').value.trim();
+  const price = Number(document.getElementById('sellPrice').value);
+  const desc = document.getElementById('sellDesc').value.trim();
+  const file = document.getElementById('sellImage').files[0];
+  if(!name || !price || !desc || !file) return alert('Fill all fields');
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const uploaded = loadUploaded();
+    const id = Date.now();
+    uploaded.push({ id, name, price, desc, img: ev.target.result, uploaded:true, owner:user });
+    saveUploaded(uploaded);
+    rebuildProductsCache(); resetAndRender(); alert('Product uploaded'); document.getElementById('sellForm').reset(); document.getElementById('sellPreview').style.display='none';
+  };
+  reader.readAsDataURL(file);
+});
+
+/* delete uploaded product */
+function deleteUploadedProduct(id){
+  let uploaded = loadUploaded(); uploaded = uploaded.filter(p=>p.id !== id); saveUploaded(uploaded); rebuildProductsCache(); resetAndRender(); renderMyProducts();
+  if(selectedProduct && selectedProduct.id === id) show('home');
+}
+
+/* my products render */
+function renderMyProducts(){
+  const wrap = document.getElementById('myList'); wrap.innerHTML='';
+  const user = getSession();
+  if(!user){ document.getElementById('noMyProducts').innerText = 'Please login to view your uploaded products.'; return; }
+  const uploaded = loadUploaded().filter(p=>p.owner === user);
+  if(uploaded.length===0){ document.getElementById('noMyProducts').innerText = 'You have no uploaded products.'; wrap.innerHTML=''; return; }
+  document.getElementById('noMyProducts').innerText = '';
+  uploaded.forEach(p=>{
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = `<img src="${p.img}"/><h4>${escapeHtml(p.name)}</h4><div class="small">₹${formatNumber(p.price)}</div>
+      <div style="margin-top:8px;display:flex;gap:8px"><button class="btn" onclick="showDetail(${p.id})">View</button>
+      <button class="btn" style="background:crimson" onclick="if(confirm('Delete?')) deleteUploadedProduct(${p.id})">Delete</button></div>`;
+    wrap.appendChild(el);
+  });
+}
+
+/* ---------- seller settings ---------- */
+function saveSellerSettings(){
+  const user = getSession(); if(!user){ alert('Login to save seller settings'); show('account'); return; }
+  const users = loadUsers(); let me = users.find(u=>u.username === user);
+  if(!me){ alert('User not found'); return; }
+  me.seller = {
+    bank: document.getElementById('sellerBank').value.trim(),
+    accName: document.getElementById('sellerAccName').value.trim(),
+    accNo: document.getElementById('sellerAccNo').value.trim(),
+    ifsc: document.getElementById('sellerIfsc').value.trim(),
+    upi: document.getElementById('sellerUpi').value.trim(),
+    pincodes: document.getElementById('sellerPincodes').value.trim(),
+    deliveryCharge: Number(document.getElementById('sellerDeliveryCharge').value || 40)
+  };
+  saveUsers(users);
+  alert('Seller settings saved');
+}
+
+/* ---------- buyer settings ---------- */
+function saveBuyerSettings(){
+  const user = getSession(); if(!user){ alert('Login to save buyer settings'); show('account'); return; }
+  const users = loadUsers(); let me = users.find(u=>u.username === user);
+  if(!me) return alert('User not found');
+  me.buyer = {
+    paymentMethod: document.getElementById('buyerPayMethod').value,
+    paymentDetail: document.getElementById('buyerPayDetail').value.trim(),
+    name: document.getElementById('buyerName').value.trim(),
+    address: document.getElementById('buyerAddress').value.trim(),
+    city: document.getElementById('buyerCity').value.trim(),
+    pincode: document.getElementById('buyerPincode').value.trim()
+  };
+  saveUsers(users);
+  alert('Buyer details saved');
+}
+
+/* ---------- account/auth ---------- */
+function signup(){
+  const u = (document.getElementById('signupUser').value||'').trim();
+  const p = (document.getElementById('signupPass').value||'').trim();
+  if(!u||!p) return alert('Enter username & password');
+  let users = loadUsers();
+  if(users.find(x=>x.username === u)) return alert('User exists');
+  users.push({ username:u, password:p, created: new Date().toISOString() });
+  saveUsers(users);
+  setSession(u); refreshAuthUI(); alert('Account created & logged in as ' + u);
+}
+function login(){
+  const u = (document.getElementById('loginUser').value||'').trim();
+  const p = (document.getElementById('loginPass').value||'').trim();
+  if(!u||!p) return alert('Enter username & password');
+  const users = loadUsers(); const found = users.find(x=>x.username===u && x.password===p);
+  if(!found) return alert('Invalid credentials');
+  setSession(u); refreshAuthUI(); alert('Logged in as ' + u);
+}
+function logout(){ setSession(null); refreshAuthUI(); alert('Logged out'); show('home'); }
+
+function refreshAuthUI(){
+  const user = getSession();
+  const prof = document.getElementById('profileWrap'); const auth = document.getElementById('authWrap');
+  if(user){ auth.style.display='none'; prof.style.display='block'; document.getElementById('profileUser').innerText = user; document.getElementById('profileInfo').innerText = 'Member since: ' + (loadUsers().find(x=>x.username===user)?.created||'unknown'); }
+  else { auth.style.display='block'; prof.style.display='none'; }
+  document.getElementById('accountBtn').innerText = user ? user : 'Account';
+  updateCartBadge();
+}
+
+/* ---------- helpers ---------- */
+function show(sectionId){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(sectionId).classList.add('active');
+  // render on show
+  if(sectionId === 'home') resetAndRender();
+  if(sectionId === 'myProducts') renderMyProducts();
+  if(sectionId === 'cart') renderCart();
+  if(sectionId === 'orders') renderOrders();
+  if(sectionId === 'account') refreshAuthUI();
+  if(sectionId === 'sellerSettings') populateSellerSettings();
+  if(sectionId === 'buyerSettings') populateBuyerSettings();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function populateSellerSettings(){
+  const user = getSession(); if(!user){ alert('Login to edit seller settings'); show('account'); return; }
+  const me = loadUsers().find(u=>u.username === user);
+  if(me && me.seller){
+    document.getElementById('sellerBank').value = me.seller.bank || '';
+    document.getElementById('sellerAccName').value = me.seller.accName || '';
+    document.getElementById('sellerAccNo').value = me.seller.accNo || '';
+    document.getElementById('sellerIfsc').value = me.seller.ifsc || '';
+    document.getElementById('sellerUpi').value = me.seller.upi || '';
+    document.getElementById('sellerPincodes').value = me.seller.pincodes || '';
+    document.getElementById('sellerDeliveryCharge').value = me.seller.deliveryCharge || 40;
+  } else {
+    document.getElementById('sellerForm').reset();
+  }
+}
+
+function populateBuyerSettings(){
+  const user = getSession(); if(!user){ alert('Login to save buyer settings'); show('account'); return; }
+  const me = loadUsers().find(u=>u.username === user);
+  if(me && me.buyer){
+    document.getElementById('buyerPayMethod').value = me.buyer.paymentMethod || 'COD';
+    document.getElementById('buyerPayDetail').value = me.buyer.paymentDetail || '';
+    document.getElementById('buyerName').value = me.buyer.name || '';
+    document.getElementById('buyerAddress').value = me.buyer.address || '';
+    document.getElementById('buyerCity').value = me.buyer.city || '';
+    document.getElementById('buyerPincode').value = me.buyer.pincode || '';
+  } else {
+    document.getElementById('buyerForm').reset();
+  }
+}
+
+/* quick buy -> add to cart then go to checkout */
+function quickBuy(){
+  const user = getSession();
+  if(!user){ alert('Please login to buy'); show('account'); return; }
+  if(!selectedProduct) return;
+  addToCart(selectedProduct.id, 1);
+  renderCart();
+  prepareCheckout();
+}
+
+/* utilities */
+function escapeHtml(s){ if(!s) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function formatNumber(n){ return Number(n).toLocaleString('en-IN'); }
+
+/* initial boot */
+(function init(){
+  rebuildProductsCache();
+  resetAndRender();
+  refreshAuthUI();
+  renderOrders();
+  updateCartBadge();
+})();
+</script>
+
+</body>
+</html>
